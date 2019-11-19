@@ -168,8 +168,8 @@ class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 				.antMatchers("/rest").denyAll()
 				.anyRequest().permitAll();
 		http.formLogin()
-				.usernameParameter("username")
-				.passwordParameter("password")
+				.usernameParameter("name")
+				.passwordParameter("pwd")
 				.loginPage("/api/login");
 
 		http.logout().logoutUrl("/api/logout");

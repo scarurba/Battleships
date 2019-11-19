@@ -5,6 +5,8 @@ import org.springframework.dao.DataAccessException;
 
 import javax.persistence.*;
 import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 @Entity
 public class Score {
@@ -69,5 +71,13 @@ public class Score {
 
     public void setGame(Game game) {
         this.game = game;
+    }
+
+    public Map<String, Object> makeScoresDTO() {
+        Map<String, Object> dto = new LinkedHashMap<String, Object>();
+        dto.put("id", this.getId());
+        dto.put("email", this.getPlayer().getUserName());
+        dto.put("score", this.getScore());
+        return dto;
     }
 }

@@ -5,6 +5,7 @@ import org.hibernate.annotations.GenericGenerator;
 
 import javax.persistence.*;
 import java.util.*;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.stream.Collectors;
 
 @Entity
@@ -31,8 +32,11 @@ public class GamePlayer {
     @OneToMany(mappedBy = "gamePlayer", fetch = FetchType.EAGER)
     private Set<Salvo> salvoes;
 
-    // constructor vacio
+
     public GamePlayer() {
+        this.joinDate = new Date();
+        this.ships = new HashSet<>();
+        this.salvoes = new HashSet<>();
     }
 
     public GamePlayer(Game game, Player player) {

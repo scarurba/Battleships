@@ -23,6 +23,7 @@ public class Game {
     private Set<Score> Scores;
 
     public Game() {
+        this.creationDate = new Date();
     }
 
     public Game(Date creationDate) {
@@ -57,7 +58,7 @@ public class Game {
     public Map<String, Object> makeGameDTO() {
         Map<String, Object> dto = new LinkedHashMap<String, Object>();
         dto.put("id",this.getId());
-        dto.put("created", this.getCreationDate().getTime());
+        dto.put("created", this.getCreationDate());
         dto.put("gamePlayers", getAllGamePlayers(this.getGamePlayers()));
         return dto;
     }
@@ -67,5 +68,9 @@ public class Game {
                 .stream()
                 .map(GamePlayer -> GamePlayer.makeGamePlayerDTO())
                 .collect(Collectors.toList());
+    }
+
+    public GamePlayer getOneGamePlayer() {
+        return this.gamePlayers.iterator().next();
     }
 }

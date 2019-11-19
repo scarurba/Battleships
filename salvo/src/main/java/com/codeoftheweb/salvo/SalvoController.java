@@ -10,10 +10,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import javax.persistence.SqlResultSetMapping;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @RestController
@@ -49,12 +46,14 @@ public class SalvoController {
         return dto;
     }
 
-
     @RequestMapping("/game_view/{id}")
     public Map<String, Object> getGameViewByGamePlayerID (@PathVariable Long id) {
         GamePlayer gamePlayer = gamePlayerRepository.findById(id).get();
 
         Map<String, Object> dto = new LinkedHashMap<>();
+        Map<String, Object> hits = new LinkedHashMap<>();
+        hits.put("self", new ArrayList<>());
+        hits.put("opponent", new ArrayList<>());
         dto.put("id", gamePlayer.getGame().getId());
         dto.put("creationDate", gamePlayer.getGame().getCreationDate());
         dto.put("gamePlayers", gamePlayer.getGame().getGamePlayers()
@@ -71,6 +70,9 @@ public class SalvoController {
                         .stream()
                         .map(salvo -> salvo.makeSalvoDTO()))
                 .collect(Collectors.toList()));
+        dto.put("hits", hits);
+        dto.put("gameState", getState(gamePlayer));
+
         return dto;
     }
 
@@ -94,18 +96,19 @@ public class SalvoController {
     }
 
     private Map<String, Object> getScoreList (Player player) {
-            Map<String, Object> dto = new LinkedHashMap<>();
-            dto.put("total", player.getTotalScore());
-            dto.put("won", player.getWins(player.getScores()));
-            dto.put("tied", player.getDraws(player.getScores()));
-            dto.put("lost", player.getLosses(player.getScores()));
-            return dto;
+        Map<String, Object> dto = new LinkedHashMap<>();
+        dto.put("total", player.getTotalScore());
+        dto.put("won", player.getWins(player.getScores()));
+        dto.put("tied", player.getDraws(player.getScores()));
+        dto.put("lost", player.getLosses(player.getScores()));
+        return dto;
     }
+
     private boolean isGuest(Authentication authentication) {
         return authentication == null || authentication instanceof AnonymousAuthenticationToken;
     }
-    //
-    @RequestMapping(path = "/player", method = RequestMethod.POST)
+    // registrar nuevo jugador
+    @RequestMapping(path = "/players", method = RequestMethod.POST)
     public ResponseEntity<Object> register( // o tambien puede ser addPlayer
         @RequestParam String username, @RequestParam String password) {
         if (username.isEmpty() || password.isEmpty()) {
@@ -116,6 +119,42 @@ public class SalvoController {
         }
         playerRepository.save(new Player(username, passwordEncoder.encode(password)));
         return new ResponseEntity<>(HttpStatus.CREATED);
+    }
+    // agregar nuevo juego
+    @RequestMapping(path = "/game/{gameId}/players", method = RequestMethod.POST)
+    public ResponseEntity<Map<String,Object>> joinGame(@PathVariable Long gameId, Authentication authentication) {
+
+        if (isGuest(authentication)) {
+            return new ResponseEntity<>(GameController.makeMap("error:", "No Autorizado usuario no logueado"), HttpStatus.UNAUTHORIZED);
+        }
+        Player player = playerRepository.findByUserName(authentication.getName()).orElse(null);
+        Game game = gameRepository.getOne(gameId);
+
+        if (game == null) {
+            return new ResponseEntity<>(GameController.makeMap("error:", "juego no encontrado"), HttpStatus.FORBIDDEN);
+        }
+        if (player == null) {
+            return new ResponseEntity<>(GameController.makeMap("error:", "jugador no encontrado"), HttpStatus.FORBIDDEN);
+        }
+        int gamePlayersCount = game.getGamePlayers().size();
+
+        if (gamePlayersCount == 1) {
+            if (game.getOneGamePlayer().getPlayer().getUserName() == player.getUserName()) {
+                return new ResponseEntity<>(GameController.makeMap("error:", "El jugador ya se encuentra en el juego"), HttpStatus.UNAUTHORIZED);
+            } else {
+                GamePlayer gamePlayer = gamePlayerRepository.save(new GamePlayer(game, player));
+                return new ResponseEntity<>(GameController.makeMap("gpId", gamePlayer.getId()), HttpStatus.CREATED);
+            }
+        } else {
+            return new ResponseEntity<>(GameController.makeMap("error", "Juego completo"), HttpStatus.OK);
+        }
+    }
+
+    public String   getState(GamePlayer gamePlayer){
+        if(!gamePlayer.getShips().isEmpty()){
+            return "WAIT";
+        }
+        return "PLACESHIPS";
     }
 
 
